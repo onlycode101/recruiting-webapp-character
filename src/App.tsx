@@ -55,6 +55,7 @@ const getCurrentSpendingSum = (char: Character): number => {
 }
 
 const fixSpendingDeficitIfAny = (char: Character): Character => {
+  // todo
   return char;
 }
 
@@ -69,7 +70,6 @@ function App() {
     // update mod
     //    if it's intelligence, the total available points is changed, 
     //        if it decreases, reset some points to make sure TAP is not exceeds
-    console.log("attr change", charIndex, attrKey, delta)
     const char: Character = chars[charIndex];
     const {skills, attributes} = char;
 
@@ -99,12 +99,36 @@ function App() {
       skills: computeSkills(nextAttributes)
     }
     
+    nextTargetChar = fixSpendingDeficitIfAny(nextTargetChar);
     let nextChars = [...chars.slice(0, charIndex), nextTargetChar, ...chars.slice(charIndex+1)];
     setChars(nextChars);
   }
 
   const onChangeSkill = (charIndex: number, skillKey: SkillKey, delta: number) => {
-    console.log("skill change", charIndex, skillKey, delta)
+    const char: Character = chars[charIndex];
+    const maxAvailablePoint: number = getMaxAvailablePoints(char);
+    const currentSpending: number = getCurrentSpendingSum(char);
+    const nextSpending: number = currentSpending + delta;
+    if (nextSpending > maxAvailablePoint) {
+      alert("You've used all available points: " + maxAvailablePoint);
+      return;
+    }
+
+    let targetSkill: Skill = char.skills[skillKey];
+    let nextTargetSkillPoint: number = Math.max(targetSkill.points + delta, 0);
+    let nextTargetSkill: Skill = {
+      ...targetSkill,
+      points: nextTargetSkillPoint
+    }
+    let nextTargetChar: Character = {
+      ...char,
+      skills: {
+        ...char.skills,
+        [skillKey]: nextTargetSkill
+      }
+    }
+    let nextChars = [...chars.slice(0, charIndex), nextTargetChar, ...chars.slice(charIndex+1)];
+    setChars(nextChars);
   }
 
   const renderAttributes = (charIndex: number, char: Character) => {
