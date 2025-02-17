@@ -1,6 +1,6 @@
-import type { Attributes, Class } from "./types";
+import type { Attributes, Class, AttrKey, SkillKey } from "./types";
 
-export const ATTRIBUTE_LIST = [
+export const ATTRIBUTE_LIST: AttrKey[] = [
     'Strength',
     'Dexterity',
     'Constitution',
@@ -36,7 +36,7 @@ export const CLASS_LIST: Record<Class, Attributes> = {
     },
 }
 
-export const SKILL_LIST = [
+export const SKILL_LIST: {name: SkillKey, attributeModifier: AttrKey }[] = [
     { name: 'Acrobatics', attributeModifier: 'Dexterity' },
     { name: 'Animal Handling', attributeModifier: 'Wisdom' },
     { name: 'Arcana', attributeModifier: 'Intelligence' },
@@ -57,3 +57,7 @@ export const SKILL_LIST = [
     { name: 'Survival', attributeModifier: 'Wisdom' },
 
 ]
+
+
+export const ATTRIBUTES_SUM_MAX = 70;
+export const ATTRIBUTE_INITIAL = 10;
