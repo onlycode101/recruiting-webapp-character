@@ -57,6 +57,10 @@ const fixSpendingDeficitIfAny = (char: Character): Character => {
   let maxAvailablePoint: number = getMaxAvailablePoints(char);
   let currentSpending: number = getCurrentSpendingSum(char);
   let remainder = maxAvailablePoint - currentSpending;
+  if (remainder >= 0) {
+    return char; // no Deficit, no need to change
+  }
+
   let nextSkills: Record<SkillKey, Skill> = {...char.skills};
 
   while (remainder < 0) {
@@ -138,7 +142,10 @@ function App() {
       skills: computeSkills(nextAttributes, skills)
     }
     
-    nextTargetChar = fixSpendingDeficitIfAny(nextTargetChar);
+    if (attrKey === "Intelligence" && delta < 0) {
+      nextTargetChar = fixSpendingDeficitIfAny(nextTargetChar);
+    }
+      
     nextTargetChar = updateSelectedClassIfNeeded(nextTargetChar);
 
     let nextChars = [...chars.slice(0, charIndex), nextTargetChar, ...chars.slice(charIndex+1)];
