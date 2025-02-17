@@ -16,17 +16,25 @@ interface Character {
 
 const getModifier = (attr: number): number => Math.floor((attr - 10)/2);
 
+const computeSkills = (attributes: Attributes): Record<SkillKey, Skill> => {
+  return SKILL_LIST.reduce((acc, skillItem) => {
+    const attrVal: number = attributes[skillItem.attributeModifier]
+    acc[skillItem.name] = {
+      points: acc[skillItem.name]?.points??0,
+      modifier: getModifier(attrVal)
+    }
+    return acc;
+  }, {
+  } as Record<SkillKey, Skill>)
+}
+
 const initCharacter = (): Character => {
   const initialAttributes: Attributes = ATTRIBUTE_LIST.reduce((prev: Attributes, cur: AttrKey) => {
     prev[cur] = ATTRIBUTE_INITIAL;
     return prev;
   }, {} as Attributes);
 
-  const initialSkills: Record<SkillKey, Skill> = SKILL_LIST.reduce((acc: Record<SkillKey, Skill>, skillItem) => {
-    const attrValue: number = initialAttributes[skillItem.attributeModifier];
-    acc[skillItem.name] = {points: 0, modifier: getModifier(attrValue)};
-    return acc;
-  }, {} as Record<SkillKey, Skill>)
+  const initialSkills: Record<SkillKey, Skill> = computeSkills(initialAttributes)
 
   return {
     attributes: initialAttributes,
@@ -36,7 +44,8 @@ const initCharacter = (): Character => {
 }
 
 const getMaxAvailablePoints = (char: Character): number => {
-  return Math.max(char.attributes.Intelligence * 4 + 10, 0);
+  const intelligenceMod: number = getModifier(char.attributes.Intelligence);
+  return Math.max(intelligenceMod * 4 + 10, 0);
 }
 
 const getCurrentSpendingSum = (char: Character): number => {
@@ -61,7 +70,37 @@ function App() {
     //    if it's intelligence, the total available points is changed, 
     //        if it decreases, reset some points to make sure TAP is not exceeds
     console.log("attr change", charIndex, attrKey, delta)
+    const char: Character = chars[charIndex];
+    const {skills, attributes} = char;
+
+    const currentAttrSum: number = Object.values(attributes).reduce((prev, cur) => {
+      return prev + cur
+    }, 0);
+
+    if(currentAttrSum + delta > ATTRIBUTES_SUM_MAX) {
+      alert("You've reached max attributes. You'll have to lower other attributes first.");
+      return;
+    }
     
+    // update both attributes and skills
+    let nextAttrVal = attributes[attrKey] + delta;
+    if (nextAttrVal < 0) {
+      return;
+    }
+
+    let nextAttributes = {
+      ...char.attributes,
+      [attrKey]: nextAttrVal
+    };
+
+    let nextTargetChar: Character = {
+      ...char,
+      attributes: nextAttributes,
+      skills: computeSkills(nextAttributes)
+    }
+    
+    let nextChars = [...chars.slice(0, charIndex), nextTargetChar, ...chars.slice(charIndex+1)];
+    setChars(nextChars);
   }
 
   const onChangeSkill = (charIndex: number, skillKey: SkillKey, delta: number) => {
@@ -137,6 +176,8 @@ function App() {
       </div>
     );
   }
+
+  console.log("char0", chars[0])
 
   return (
     <div className="App">
