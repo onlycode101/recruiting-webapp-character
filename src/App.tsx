@@ -96,7 +96,7 @@ const updateSelectedClassIfNeeded = (char: Character): Character => {
       classArr.push(classKey as Class)
     }
   }
-  return {...char, selectedClass: classArr.join("")}
+  return {...char, selectedClass: classArr.join(",")}
 }
 
 function App() {
