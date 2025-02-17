@@ -16,16 +16,15 @@ interface Character {
 
 const getModifier = (attr: number): number => Math.floor((attr - 10)/2);
 
-const computeSkills = (attributes: Attributes): Record<SkillKey, Skill> => {
+const computeSkills = (attributes: Attributes, existingSkills: Record<SkillKey, Skill> = {} as Record<SkillKey, Skill>): Record<SkillKey, Skill> => {
   return SKILL_LIST.reduce((acc, skillItem) => {
-    const attrVal: number = attributes[skillItem.attributeModifier]
+    const attrVal: number = attributes[skillItem.attributeModifier];
     acc[skillItem.name] = {
       points: acc[skillItem.name]?.points??0,
       modifier: getModifier(attrVal)
     }
     return acc;
-  }, {
-  } as Record<SkillKey, Skill>)
+  }, existingSkills)
 }
 
 const initCharacter = (): Character => {
@@ -55,12 +54,52 @@ const getCurrentSpendingSum = (char: Character): number => {
 }
 
 const fixSpendingDeficitIfAny = (char: Character): Character => {
-  // todo
-  return char;
+  let maxAvailablePoint: number = getMaxAvailablePoints(char);
+  let currentSpending: number = getCurrentSpendingSum(char);
+  let remainder = maxAvailablePoint - currentSpending;
+  let nextSkills: Record<SkillKey, Skill> = {...char.skills};
+
+  while (remainder < 0) {
+    for (let skillItem of SKILL_LIST) {
+      // reduce point evenly across all attributes until remainder is not negative
+      let {name: skillKey} = skillItem;
+      let {points, ...restOfThisSkill} : Skill= nextSkills[skillKey];
+      if (points > 0) {
+        remainder++;
+        nextSkills = {
+          ...nextSkills,
+          [skillKey]: {
+            ...restOfThisSkill,
+            points: points-1
+          }
+        }
+      }
+    }
+  }
+  return {
+    ...char,
+    skills: nextSkills
+  };
+}
+
+const updateSelectedClassIfNeeded = (char: Character): Character => {
+  let classArr: Class[] = [];
+  let attributes = char.attributes;
+  for (let classKey in CLASS_LIST) {
+    let requirements: Attributes = CLASS_LIST[classKey];
+    const someReqNotMeet = Object.keys(requirements).some(attrKey => {
+      const reqAttrVal: number = requirements[attrKey];
+      const charAttrVal: number = attributes[attrKey];
+      return charAttrVal < reqAttrVal;
+    });
+    if (!someReqNotMeet) {
+      classArr.push(classKey as Class)
+    }
+  }
+  return {...char, selectedClass: classArr.join("")}
 }
 
 function App() {
-  const [num, setNum] = useState<number>(0);
   const [chars, setChars] = useState<Character[]>([initCharacter()]);
 
   
@@ -96,10 +135,12 @@ function App() {
     let nextTargetChar: Character = {
       ...char,
       attributes: nextAttributes,
-      skills: computeSkills(nextAttributes)
+      skills: computeSkills(nextAttributes, skills)
     }
     
     nextTargetChar = fixSpendingDeficitIfAny(nextTargetChar);
+    nextTargetChar = updateSelectedClassIfNeeded(nextTargetChar);
+
     let nextChars = [...chars.slice(0, charIndex), nextTargetChar, ...chars.slice(charIndex+1)];
     setChars(nextChars);
   }
@@ -151,10 +192,12 @@ function App() {
   } 
   
   const renderClasses = (charIndex: number, char: Character) => {
+    const {selectedClass} = char;
     return (
       <ul style={{border: "1px solid gray"}}>
       {Object.keys(CLASS_LIST).map(classKey => {
-        return <li key={classKey} style={{listStyle: "none"}}>
+        const isSelected = selectedClass.includes(classKey);
+        return <li key={classKey} style={{listStyle: "none", color: isSelected ? "red" : "unset"}}>
           {classKey}
         </li>
       })}
@@ -163,7 +206,7 @@ function App() {
   }
 
   const renderSkills = (charIndex: number, char: Character) => {
-    const {attributes, skills}= char;
+    const {skills}= char;
 
     return (
       <div style={{border: "1px solid gray"}}>
@@ -174,7 +217,7 @@ function App() {
           let {points, modifier}: Skill = skills[name];
           const total = points + modifier;
           return <li key={name} style={{listStyle: "none"}}>
-            <span>{name}: {points} (Modifier: {modifier})</span>
+            <span>{name}: {points} (Modifier: {attributeModifier}): {modifier}</span>
             <button onClick={() => onChangeSkill(charIndex, name, 1)}>+</button>
             <button onClick={() => onChangeSkill(charIndex, name, -1)}>-</button>
             <span>total: {total}</span>
